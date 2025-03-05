@@ -14,7 +14,8 @@ contract HelperConfig is Script {
     uint256 constant ETH_SEPOLIA_CHAIN_ID = 11155111;
     uint256 constant ZKSYNC_SEPOLIA_CHAIN_ID = 300;
     uint256 constant LOCAL_CHAIN_ID = 31337;
-    address constant BURNER_WALLET = 0xD4421aFbf7378CA369268Ef85A1DE24Ab64Ef3C1; //Your burner testnet wallet address here
+    address constant BURNER_WALLET = 0xD4421aFbf7378CA369268Ef85A1DE24Ab64Ef3C1;
+    address constant FOUNDRY_DEFAULT_WALLET = 0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38;
 
     NetworkConfig public localNetworkConfig;
     mapping(uint256 chainId => NetworkConfig) public networkConfigs;
@@ -23,11 +24,11 @@ contract HelperConfig is Script {
         networkConfigs[ETH_SEPOLIA_CHAIN_ID] = getEthSepoliaConfig();
     }
 
-    function getConfig() public returns (NetworkConfig memory) {
+    function getConfig() public view returns (NetworkConfig memory) {
         return getConfigByChainId(block.chainid);
     }
 
-    function getConfigByChainId(uint256 chainId) public returns (NetworkConfig memory) {
+    function getConfigByChainId(uint256 chainId) public view returns (NetworkConfig memory) {
         if (chainId == LOCAL_CHAIN_ID) {
             return getOrCreateAnvilEthConfig();
         } else if (networkConfigs[chainId].account != address(0)) {
@@ -48,9 +49,11 @@ contract HelperConfig is Script {
         });
     }
 
-    function getOrCreateAnvilEthConfig() public returns (NetworkConfig memory) {
+    function getOrCreateAnvilEthConfig() public view returns (NetworkConfig memory config) {
         if (localNetworkConfig.account != address(0)) {
             return localNetworkConfig;
+        } else {
+            return NetworkConfig({entryPoint: address(0), account: FOUNDRY_DEFAULT_WALLET});
         }
     }
 }
