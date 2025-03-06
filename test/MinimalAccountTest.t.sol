@@ -2,6 +2,7 @@
 pragma solidity 0.8.24;
 
 import {Test} from "forge-std/Test.sol";
+import {console2} from "forge-std/Script.sol";
 import {MinimalAccount} from "src/ethereum/MinimalAccount.sol";
 import {DeployMinimal} from "script/DeployMinimal.s.sol";
 import {HelperConfig} from "script/HelperConfig.s.sol";
@@ -70,5 +71,27 @@ contract MinimalAccountTest is Test {
 
         // Assert
         assertEq(actualSigner, minimalAccount.owner());
+    }
+
+    function testValidationOfUserOps() public {
+        // Arrange
+        assertEq(usdc.balanceOf(address(minimalAccount)), 0);
+        address dest = address(usdc);
+        uint256 value = 0;
+        bytes memory functionData = abi.encodeWithSelector(ERC20Mock.mint.selector, address(minimalAccount), AMOUNT);
+        bytes memory executeCallData =
+            abi.encodeWithSelector(MinimalAccount.execute.selector, dest, value, functionData);
+        PackedUserOperation memory packedUserOp =
+            sendPackedUserOp.generateSignedUserOperation(executeCallData, helperConfig.getConfig());
+        bytes32 userOperationHash = IEntryPoint(helperConfig.getConfig().entryPoint).getUserOpHash(packedUserOp);
+        uint256 missingAccountFunds = 1e18;
+
+        // Act
+        console2.log("prank entry point: ", helperConfig.getConfig().entryPoint);
+        console2.log("minimalaccount entry point: ", minimalAccount.getEntryPoint());
+
+        vm.prank(helperConfig.getConfig().entryPoint);
+        uint256 validationData = minimalAccount.validateUserOp(packedUserOp, userOperationHash, missingAccountFunds);
+        assertEq(validationData, 0);
     }
 }
