@@ -51,7 +51,8 @@ contract MinimalAccount is IAccount, Ownable {
 
     receive() external payable {}
 
-    //A signature is valid if it's the MinimalAccount owner.
+    // A signature is valid if it's the MinimalAccount owner.
+    // This is the main operation that gets called where any custom logic/terms can live
     function validateUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 missingAccountFunds)
         external
         requireFromEntryPoint
