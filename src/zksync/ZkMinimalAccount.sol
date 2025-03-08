@@ -76,6 +76,8 @@ contract ZkMinimalAccount is IAccount, Ownable {
     //////////////////////////////////////////////////////////////*/
     constructor() Ownable(msg.sender) {}
 
+    receive() external payable {}
+
     /*//////////////////////////////////////////////////////////////
                            EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -90,6 +92,43 @@ contract ZkMinimalAccount is IAccount, Ownable {
         bytes32, /* _suggestedSignedHash */
         Transaction memory _transaction
     ) external payable requireFromBootLoader returns (bytes4 magic) {
+        return _validateTransaction(_transaction);
+    }
+
+    function executeTransaction(
+        bytes32, /* _txHash */
+        bytes32, /* _suggestedSignedHash */
+        Transaction memory _transaction
+    ) external payable {
+        _executeTransaction(_transaction);
+    }
+
+    // can be called from any user that wants to pay for the transaction
+    function executeTransactionFromOutside(Transaction calldata _transaction) external payable {
+        _validateTransaction(_transaction);
+        _executeTransaction(_transaction);
+    }
+
+    function payForTransaction(
+        bytes32, /* _txHash */
+        bytes32, /* _suggestedSignedHash */
+        Transaction memory _transaction
+    ) external payable {
+        bool success = _transaction.payToTheBootloader();
+        if (!success) {
+            revert ZkMinimalAccount__FailedToPay();
+        }
+    }
+
+    function prepareForPaymaster(bytes32 _txHash, bytes32 _possibleSignedHash, Transaction memory _transaction)
+        external
+        payable
+    {}
+
+    /*//////////////////////////////////////////////////////////////
+                           INTERNAL FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+    function _validateTransaction(Transaction memory _transaction) internal returns (bytes4 magic) {
         // Call NonceHolder
         // increment nonce by 1
         SystemContractsCaller.systemCallWithPropagatedRevert(
@@ -118,11 +157,7 @@ contract ZkMinimalAccount is IAccount, Ownable {
         return magic;
     }
 
-    function executeTransaction(
-        bytes32, /* _txHash */
-        bytes32, /* _suggestedSignedHash */
-        Transaction memory _transaction
-    ) external payable {
+    function _executeTransaction(Transaction memory _transaction) internal {
         address to = address(uint160(_transaction.to));
         uint128 value = Utils.safeCastToU128(_transaction.value);
         bytes memory data = _transaction.data;
@@ -140,26 +175,4 @@ contract ZkMinimalAccount is IAccount, Ownable {
             }
         }
     }
-
-    function executeTransactionFromOutside(Transaction calldata _transaction) external payable {}
-
-    function payForTransaction(
-        bytes32, /* _txHash */
-        bytes32, /* _suggestedSignedHash */
-        Transaction memory _transaction
-    ) external payable {
-        bool success = _transaction.payToTheBootloader();
-        if (!success) {
-            revert ZkMinimalAccount__FailedToPay();
-        }
-    }
-
-    function prepareForPaymaster(bytes32 _txHash, bytes32 _possibleSignedHash, Transaction memory _transaction)
-        external
-        payable
-    {}
-
-    /*//////////////////////////////////////////////////////////////
-                           INTERNAL FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
 }
